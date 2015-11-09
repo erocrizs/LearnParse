@@ -1,57 +1,175 @@
 <!doctype html>
-<head>
-  <meta charset="utf-8">
+<html>
+	<head>
+	  <meta charset="utf-8">
 
-  <title>My Parse App</title>
-  <meta name="description" content="My Parse App">
-  <meta name="viewport" content="width=device-width">
-  <link rel="stylesheet" href="css/reset.css">
-  <link rel="stylesheet" href="css/styles.css">
-  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
-  <script type="text/javascript" src="http://www.parsecdn.com/js/parse-latest.js"></script>
-</head>
+	  <title>My Parse App</title>
+	  <meta name="description" content="My Parse App">
+	  <meta name="viewport" content="width=device-width">
+	  <link rel="stylesheet" href="css/reset.css">
+	  <link rel="stylesheet" href="css/styles.css">
+	  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	  <script type="text/javascript" src="http://www.parsecdn.com/js/parse-latest.js"></script>
+	</head>
 
-<body>
-  
-  <div id="main">
-    <h1>You're ready to use Parse!</h1>
+	<body>
+	  
+		<div id="main">
+			<h1>You're ready to use Parse!</h1>
+			
+			<h2>Log Out</h2>
+			<h3 id="loggedIn"></h3>
+			<div>
+				<button id="logout">Log Out</button>
+			</div>
+			
+			<hr />
+			
+			<h2>Log In</h2>
+			<form id="login">
+				<p><input id="login-username" type="text" /></p>
+				<p><input id="login-password" type="password" /></p>
+				<p><input id="login-password" type="submit" /></p>
+			</form>
+			
+			<hr />
+			
+			<h2>Sign Up</h2>
+			<form id="signup">
+				<p><input id="signup-username" type="text" /></p>
+				<p><input id="signup-password" type="password" /></p>
+				<p><input id="signup-password" type="submit" /></p>
+			</form>
+			
+			<hr />
+			
+			<h2>Add Post</h2>
+			<form id="add-post">
+				<p><input id="post-title" type="text" /></p>
+				<p><textarea id="post-content"></textarea></p>
+				<p><input id="post-submit" type="submit"></input></p>
+			</form>
+			 
+			<hr />
+			
+			<h2>Existing Posts</h2>
+			<ul id="post-list">
+				
+			</ul>
+			
+		</div>
 
-    <p>Read the documentation and start building your JavaScript app:</p>
-
-    <ul>
-      <li><a href="https://www.parse.com/docs/js_guide">Parse JavaScript Guide</a></li>
-      <li><a href="https://www.parse.com/docs/js">Parse JavaScript API Documentation</a></li>
-    </ul>
-
-    <div style="display:none" class="error">
-      Looks like there was a problem saving the test object. Make sure you've set your application ID and javascript key correctly in the call to <code>Parse.initialize</code> in this file.
-    </div>
-
-    <div style="display:none" class="success">
-      <p>We've also just created your first object using the following code:</p>
-      
-        <code>
-          var TestObject = Parse.Object.extend("TestObject");<br/>
-          var testObject = new TestObject();<br/>
-          testObject.save({foo: "bar"});
-        </code>
-    </div>
-  </div>
-
-  <script type="text/javascript">
-    Parse.initialize("APPLICATION_ID", "JAVASCRIPT_KEY");
-    
-    var TestObject = Parse.Object.extend("TestObject");
-    var testObject = new TestObject();
-      testObject.save({foo: "bar"}, {
-      success: function(object) {
-        $(".success").show();
-      },
-      error: function(model, error) {
-        $(".error").show();
-      }
-    });
-  </script>
-</body>
+		<script type="text/javascript">
+			Parse.initialize("ybyuHGrDL5rK4mE9D5zpbsXCw9PIe77ZM8eB1yY9", "jqrQTPEjM79flPETZQki1RCjkiZlPXzTrvY98JM5");
+			var Post = Parse.Object.extend("Post");
+			
+			function checkLogIn() {
+				if(Parse.User.current()) {
+					var current = Parse.User.current();
+					var name = current.get("username");
+					var out = "Logged In: " + name;
+					$("#loggedIn").html(out);
+				} else {
+					$("#loggedIn").html("Not logged in.");
+				}
+			}
+			
+			function getPosts() {
+				var query = new Parse.Query(Post);
+				query.find({
+					success: function(results) {
+						var out = "";
+						for(var i=0; i<results.length; i++) {
+							var title = results[i].get("title");
+							var content = results[i].get("content");
+							
+							out += "<li>";
+							out += "<h3>"+ title +"</h3>";
+							out += "<p>"+ content +"</p>";
+							out += "</li>";
+						}
+						$("#post-list").html(out);
+					}, error: function(error) {
+						console.log("Post Query Error: " + error.message);
+					}
+				});
+			}
+			
+			checkLogIn();
+			getPosts();
+			
+			$("#add-post").submit(
+				function(event) {
+					event.preventDefault();
+					var title = $("#post-title").val();
+					var content = $("#post-content").val();
+					
+					var add = new Post();
+					add.set("title", title);
+					add.set("content", content);
+					
+					add.save({
+						success: function() {
+							$("#add-post").each( function() {
+								this.reset();
+							});
+							getPosts();
+						}, error: function(error) {
+							console.log("Error: " + error.message);
+						}
+					});
+				}
+			);
+			
+			$("#login").submit(
+				function(event) {
+					event.preventDefault();
+					var uname = $("#login-username").val();
+					var pass = $("#login-password").val();
+					
+					Parse.User.logIn(uname, pass, {
+						success: function(user) {
+							checkLogIn();
+							$("#login").each( function() {
+								this.reset();
+							});
+						}, error: function(user, error) {
+							console.log("Log In Error: " + error.message);
+						}
+					});
+				}
+			);
+			
+			$("#logout").click( function(event) {
+				Parse.User.logOut();
+				checkLogIn();
+			});
+			
+			$("#signup").submit(
+				function(event) {
+					event.preventDefault();
+					var uname = $("#signup-username").val();
+					var pass = $("#signup-password").val();
+					
+					var add = new Parse.User();
+					add.set("username", uname);
+					add.set("password", pass);
+					
+					add.signUp(null, {
+						success: function(user) {
+							checkLogIn();
+							$("#signup").each( function() {
+								this.reset();
+							});
+							
+						}, error: function(user, error) {
+							console.log("Sign Up Error: " + error.message);
+						}
+					});
+				}
+			);
+			
+		</script>
+	</body>
 
 </html>
