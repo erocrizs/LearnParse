@@ -47,7 +47,8 @@
 			<form id="add-post">
 				<p><input id="post-title" type="text" /></p>
 				<p><textarea id="post-content"></textarea></p>
-				<p><input id="post-submit" type="submit"></input></p>
+				<p><input id="post-file" type="file" /></p>
+				<p><input id="post-submit" type="submit" /></p>
 			</form>
 			 
 			<hr />
@@ -76,16 +77,27 @@
 			
 			function getPosts() {
 				var query = new Parse.Query(Post);
+				query.include("user");
 				query.find({
 					success: function(results) {
 						var out = "";
 						for(var i=0; i<results.length; i++) {
 							var title = results[i].get("title");
 							var content = results[i].get("content");
+							var user = results[i].get("user");
+							var username = user.get("username");
+							var file = results[i].get("file");
+							
+							var imgTag = "";
+							if(file) {
+								imgTag = "<img src='" + file.url() + "' />";
+							}
 							
 							out += "<li>";
 							out += "<h3>"+ title +"</h3>";
+							out += "<small><i>"+ username +"</i></small>";
 							out += "<p>"+ content +"</p>";
+							out += imgTag;
 							out += "</li>";
 						}
 						$("#post-list").html(out);
@@ -103,21 +115,53 @@
 					event.preventDefault();
 					var title = $("#post-title").val();
 					var content = $("#post-content").val();
+					var user = Parse.User.current();
 					
 					var add = new Post();
 					add.set("title", title);
 					add.set("content", content);
+					add.set("user", user);
 					
-					add.save({
-						success: function() {
-							$("#add-post").each( function() {
-								this.reset();
+					var fileElement = $("#post-file")[0];
+					var filePath = $("#post-file").val();
+					var fileName = filePath.split("\\").pop();
+					
+					if(fileElement.files.length > 0)
+					{
+						var file = fileElement.files[0];
+						var newFile = new Parse.File(fileName, file);
+						
+						newFile.save({
+							success: function() {
+							}, error: function(file, error) {
+								console.log("File Save Error: " + error.message);
+							}
+						}).then( function(theFile) {
+							add.set("file", theFile);
+							add.save({
+								success: function() {
+									$("#add-post").each( function() {
+										this.reset();
+									});
+									getPosts();
+								}, error: function(error) {
+									console.log("Post Save with File Error: " + error.message);
+								}
 							});
-							getPosts();
-						}, error: function(error) {
-							console.log("Error: " + error.message);
-						}
-					});
+						});
+					}
+					else{
+						add.save({
+							success: function() {
+								$("#add-post").each( function() {
+									this.reset();
+								});
+								getPosts();
+							}, error: function(error) {
+								console.log("Error: " + error.message);
+							}
+						});
+					}
 				}
 			);
 			
